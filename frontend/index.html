@@ -1,0 +1,588 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Travel Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #f5f5f5;
+      --bg2:    #ffffff;
+      --bg3:    #f0f0f0;
+      --bg4:    #e8e8e8;
+      --border: #e0e0e0;
+      --bord2:  #d0d0d0;
+      --text:   #111111;
+      --text2:  #444444;
+      --text3:  #888888;
+      --green:  #16a34a;
+      --yellow: #b45309;
+      --red:    #dc2626;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 3rem 1.25rem 5rem;
+      line-height: 1.5;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    /* -- Header -- */
+    .header { text-align: center; margin-bottom: 3rem; }
+    .header-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text3);
+      border: 1px solid var(--bord2); border-radius: 99px;
+      padding: 5px 14px; margin-bottom: 1.2rem;
+    }
+    .header-eyebrow::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 5px rgba(22,163,74,0.4);
+    }
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800;
+      letter-spacing: -1.5px; color: var(--text); line-height: 1.1;
+    }
+    .header h1 em { font-style: normal; color: var(--text3); }
+    .header p { font-size: 1rem; color: var(--text2); margin-top: 0.75rem; }
+
+    /* -- Card -- */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    /* -- Limits Banner -- */
+    .limits-info {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      margin-bottom: 1.75rem; padding-bottom: 1.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .limit-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.72rem; color: var(--text3); font-weight: 500;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 10px;
+    }
+    .limit-badge span { color: var(--text2); font-weight: 600; }
+
+    /* -- Form -- */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .form-group { display: flex; flex-direction: column; gap: 7px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label {
+      font-size: 0.7rem; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 1px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    input {
+      background: var(--bg3); border: 1px solid var(--bord2);
+      border-radius: 10px; color: var(--text); font-family: inherit;
+      font-size: 0.95rem; font-weight: 500;
+      padding: 0.78rem 1rem; outline: none;
+      transition: border-color 0.2s, background 0.2s; width: 100%;
+    }
+    input::placeholder { color: var(--text3); }
+    input:hover  { background: var(--bg4); }
+    input:focus  { border-color: #555; background: var(--bg4); }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: none; cursor: pointer; }
+
+    .hint { font-size: 0.74rem; color: var(--text3); }
+    .hint.warn  { color: var(--yellow); }
+    .hint.error { color: var(--red); }
+
+    .day-counter {
+      font-size: 0.65rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 99px; letter-spacing: 0.3px;
+    }
+    .day-counter.ok   { background: #dcfce7; color: var(--green); }
+    .day-counter.warn { background: #fef3c7; color: var(--yellow); }
+    .day-counter.bad  { background: #fee2e2; color: var(--red); }
+
+    /* -- Textarea -- */
+    textarea {
+      background: var(--bg3); border: 1px solid var(--bord2);
+      border-radius: 10px; color: var(--text); font-family: inherit;
+      font-size: 0.95rem; font-weight: 500;
+      padding: 0.78rem 1rem; outline: none; resize: vertical;
+      transition: border-color 0.2s, background 0.2s; width: 100%;
+      min-height: 80px; line-height: 1.5;
+    }
+    textarea::placeholder { color: var(--text3); }
+    textarea:hover  { background: var(--bg4); }
+    textarea:focus  { border-color: #555; background: var(--bg4); }
+    .char-count { font-size: 0.7rem; color: var(--text3); text-align: right; margin-top: 3px; }
+    .char-count.warn { color: var(--yellow); }
+
+    /* -- Button -- */
+    .btn {
+      margin-top: 1.5rem; width: 100%;
+      padding: 0.9rem 1rem;
+      background: #111111; color: #ffffff;
+      border: none; border-radius: 10px;
+      font-family: inherit; font-size: 0.92rem; font-weight: 700;
+      letter-spacing: 0.3px; cursor: pointer;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+    }
+    .btn:hover:not(:disabled) { background: #333333; transform: translateY(-1px); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* -- Loader -- */
+    .loader {
+      display: none; align-items: center; gap: 0.9rem;
+      padding: 1.4rem 0 0.2rem;
+      color: var(--text2); font-size: 0.83rem; font-weight: 500;
+    }
+    .loader.visible { display: flex; }
+    .spinner {
+      width: 18px; height: 18px; flex-shrink: 0;
+      border: 2px solid var(--border); border-top-color: var(--text2);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* -- Error -- */
+    .error-box {
+      display: none;
+      background: #fff5f5; border: 1px solid #fca5a5;
+      border-radius: 10px; padding: 0.9rem 1.1rem;
+      color: var(--red); font-size: 0.84rem; margin-top: 1.2rem; line-height: 1.55;
+    }
+    .error-box.visible { display: block; }
+
+    /* -- Results -- */
+    #results { margin-top: 2rem; display: none; flex-direction: column; }
+    #results.visible { display: flex; }
+
+    /* -- Summary -- */
+    .summary-bar {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.4rem 1.6rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;
+    }
+    .summary-city { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+    .summary-meta { font-size: 0.78rem; color: var(--text3); margin-top: 3px; font-weight: 500; }
+    .summary-right { text-align: right; }
+    .summary-budget { font-size: 0.97rem; font-weight: 700; color: var(--text); }
+    .summary-est { font-size: 0.75rem; color: var(--text3); margin-top: 3px; }
+
+    /* -- Day Card -- */
+    .day-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden; margin-bottom: 0.85rem;
+    }
+    .day-header {
+      padding: 0.8rem 1.4rem;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border); background: var(--bg3);
+    }
+    .date-label {
+      font-size: 0.75rem; font-weight: 700; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 1.2px;
+    }
+    .daily-cost {
+      font-size: 0.74rem; font-weight: 700; color: var(--text3);
+      background: var(--bg4); border: 1px solid var(--bord2);
+      border-radius: 5px; padding: 3px 9px;
+    }
+    .day-body { padding: 1.3rem 1.4rem; display: flex; flex-direction: column; gap: 1.2rem; }
+
+    /* -- Sections -- */
+    .section-title {
+      font-size: 0.63rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.8px; color: var(--text3); margin-bottom: 0.6rem;
+    }
+    .section-divider { height: 1px; background: var(--border); }
+
+    /* -- Place -- */
+    .place-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    .place-info { flex: 1; min-width: 0; }
+    .place-name {
+      font-size: 0.92rem; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .place-addr { font-size: 0.76rem; color: var(--text3); margin-top: 2px; }
+    .place-meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 5px; flex-wrap: wrap; }
+    .rating {
+      font-size: 0.7rem; font-weight: 600; color: var(--yellow);
+      background: #fef3c7; border: 1px solid #fde68a;
+      border-radius: 4px; padding: 1px 6px;
+    }
+    .price-tag { font-size: 0.76rem; font-weight: 700; color: var(--green); }
+    .maps-link {
+      font-size: 0.7rem; color: var(--text3); text-decoration: none;
+      font-weight: 600; padding: 4px 10px;
+      border: 1px solid var(--bord2); border-radius: 6px;
+      white-space: nowrap; flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .maps-link:hover { border-color: #555; color: var(--text2); }
+
+    /* -- Meals -- */
+    .meals-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; }
+    .meal-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.85rem;
+    }
+    .meal-label {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text3); margin-bottom: 0.3rem;
+    }
+    .meal-name { font-size: 0.86rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .meal-addr { font-size: 0.73rem; color: var(--text3); margin-top: 3px; line-height: 1.3; }
+    .meal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; flex-wrap: wrap; gap: 4px; }
+
+    /* -- Sightseeing -- */
+    .sight-item {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.85rem 1rem;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+    }
+    .sight-time {
+      font-size: 0.68rem; font-weight: 700; color: var(--text3);
+      background: var(--bg4); border: 1px solid var(--bord2);
+      border-radius: 5px; padding: 2px 8px; white-space: nowrap;
+    }
+    .sight-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+
+    /* -- Responsive -- */
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .meals-row { grid-template-columns: 1fr; }
+      .summary-bar { flex-direction: column; align-items: flex-start; }
+      .summary-right { text-align: left; }
+      body { padding: 2rem 1rem 4rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-eyebrow">AI-Powered - GPT Model</div>
+    <h1>Travel <em>Itinerary</em><br>Planner</h1>
+    <p>Personalized day-by-day trips - hotels, meals &amp; sightseeing</p>
+  </div>
+
+  <div class="card">
+    <div class="limits-info">
+      <div class="limit-badge">Max <span>14 days</span></div>
+      <div class="limit-badge">Budget <span>$50 - $500,000</span></div>
+      <div class="limit-badge">Up to <span>3 spots / day</span></div>
+      <div class="limit-badge">Takes <span>~20-40 sec</span></div>
+    </div>
+
+    <form id="planForm">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label for="city">Destination</label>
+          <input id="city" type="text" placeholder="Tokyo - Paris - New York City - Bali" required />
+          <div class="hint">Enter a specific city for best results</div>
+        </div>
+        <div class="form-group">
+          <label for="start_date">Start Date <span id="dayCounter" class="day-counter" style="display:none"></span></label>
+          <input id="start_date" type="date" required />
+        </div>
+        <div class="form-group">
+          <label for="end_date">End Date</label>
+          <input id="end_date" type="date" required />
+          <div class="hint" id="dateHint">Maximum 14 days</div>
+        </div>
+        <div class="form-group full">
+          <label for="budget">Total Budget (USD)</label>
+          <input id="budget" type="number" min="50" max="500000" placeholder="1500" required />
+          <div class="hint" id="budgetHint">Recommended $100-$500 per day - Min $50 - Max $500,000</div>
+        </div>
+        <div class="form-group full">
+          <label for="preferences">Preferences <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:0.68rem">(optional)</span></label>
+          <textarea id="preferences" maxlength="500" placeholder="e.g. I love Thai food and ramen, must visit teamLab, prefer boutique hotels, vegetarian meals..."></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
+            <div class="hint">Restaurants, sightseeing spots, dietary needs, accommodation style...</div>
+            <div class="char-count" id="prefCount">0 / 500</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" type="submit" id="submitBtn">Generate Itinerary</button>
+    </form>
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <span>Planning your trip with AI - this may take up to 40 seconds...</span>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script>
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+  const today = new Date();
+  const todayStr = fmt(today);
+  const startEl = document.getElementById('start_date');
+  const endEl   = document.getElementById('end_date');
+
+  // Enforce minimum dates
+  startEl.min = todayStr;
+  endEl.min   = todayStr;
+
+  startEl.value = todayStr;
+  const defEnd = new Date(today); defEnd.setDate(defEnd.getDate() + 2);
+  endEl.value = fmt(defEnd);
+  endEl.min   = startEl.value;  // end >= start from the start
+
+  function getDays() {
+    const s = document.getElementById('start_date').value;
+    const e = document.getElementById('end_date').value;
+    if (!s || !e) return null;
+    return Math.round((new Date(e) - new Date(s)) / 86400000) + 1;
+  }
+
+  function updateDayCounter() {
+    const days = getDays();
+    const counter  = document.getElementById('dayCounter');
+    const dateHint = document.getElementById('dateHint');
+    if (days === null) { counter.style.display = 'none'; return; }
+    counter.style.display = 'inline-block';
+    if (days < 1) {
+      counter.textContent = 'Invalid'; counter.className = 'day-counter bad';
+      dateHint.textContent = 'End date must be on or after start date.'; dateHint.className = 'hint error';
+    } else if (days > 14) {
+      counter.textContent = `${days}d (over)`; counter.className = 'day-counter bad';
+      dateHint.textContent = `${days} days exceeds 14-day maximum - please shorten your trip.`; dateHint.className = 'hint error';
+    } else if (days > 10) {
+      counter.textContent = `${days} days`; counter.className = 'day-counter warn';
+      dateHint.textContent = `${days}-day trips may take up to 60 seconds to generate.`; dateHint.className = 'hint warn';
+    } else {
+      counter.textContent = `${days}d (ok)`; counter.className = 'day-counter ok';
+      dateHint.textContent = 'Maximum 14 days'; dateHint.className = 'hint';
+    }
+  }
+
+  function updateBudgetHint() {
+    const days   = getDays();
+    const budget = parseInt(document.getElementById('budget').value, 10);
+    const hint   = document.getElementById('budgetHint');
+    if (!budget || !days || days < 1) {
+      hint.textContent = 'Recommended $100-$500 per day - Min $50 - Max $500,000'; hint.className = 'hint'; return;
+    }
+    const ppd = Math.round(budget / days);
+    if (budget < 50) {
+      hint.textContent = 'Budget too low - minimum is $50.'; hint.className = 'hint error';
+    } else if (ppd < 50) {
+      hint.textContent = `$${ppd}/day is very tight for ${days} days - consider increasing your budget.`; hint.className = 'hint warn';
+    } else if (ppd > 5000) {
+      hint.textContent = `$${ppd.toLocaleString()}/day - luxury tier. AI will recommend premium options.`; hint.className = 'hint';
+    } else {
+      hint.textContent = `~$${ppd.toLocaleString()}/day across ${days} day${days>1?'s':''} - looks good.`; hint.className = 'hint';
+    }
+  }
+
+  ['start_date','end_date'].forEach(id =>
+    document.getElementById(id).addEventListener('change', () => {
+      // When start changes, push end_date minimum forward
+      const s = document.getElementById('start_date').value;
+      if (s) document.getElementById('end_date').min = s;
+      // When start moves past end, reset end to start
+      const e = document.getElementById('end_date').value;
+      if (s && e && e < s) document.getElementById('end_date').value = s;
+      updateDayCounter(); updateBudgetHint();
+    })
+  );
+  document.getElementById('budget').addEventListener('input', updateBudgetHint);
+  updateDayCounter(); updateBudgetHint();
+
+  // Preferences character counter
+  document.getElementById('preferences').addEventListener('input', function() {
+    const len = this.value.length;
+    const counter = document.getElementById('prefCount');
+    counter.textContent = `${len} / 500`;
+    counter.className = len > 450 ? 'char-count warn' : 'char-count';
+  });
+
+  document.getElementById('planForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn      = document.getElementById('submitBtn');
+    const loader   = document.getElementById('loader');
+    const errorBox = document.getElementById('errorBox');
+    const results  = document.getElementById('results');
+
+    btn.disabled = true; btn.textContent = 'Generating...';
+    loader.classList.add('visible');
+    errorBox.classList.remove('visible');
+    results.classList.remove('visible'); results.innerHTML = '';
+
+    const payload = {
+      city:        document.getElementById('city').value.trim(),
+      start_date:  document.getElementById('start_date').value,
+      end_date:    document.getElementById('end_date').value,
+      budget:      parseInt(document.getElementById('budget').value, 10),
+      preferences: document.getElementById('preferences').value.trim() || null,
+    };
+
+    // Client-side guards (e.preventDefault bypasses HTML required validation)
+    if (!payload.city) {
+      errorBox.textContent = 'Please enter a destination city.';
+      errorBox.classList.add('visible'); reset(btn); return;
+    }
+    if (!payload.start_date || !payload.end_date) {
+      errorBox.textContent = 'Please select both start and end dates.';
+      errorBox.classList.add('visible'); reset(btn); return;
+    }
+    if (isNaN(payload.budget)) {
+      errorBox.textContent = 'Please enter a valid budget amount.';
+      errorBox.classList.add('visible'); reset(btn); return;
+    }
+
+    const days = getDays();
+    if (!days || days < 1) {
+      errorBox.textContent = 'End date must be on or after start date.';
+      errorBox.classList.add('visible'); reset(btn); return;
+    }
+    if (days > 14) {
+      errorBox.textContent = `Maximum trip length is 14 days (you selected ${days} days).`;
+      errorBox.classList.add('visible'); reset(btn); return;
+    }
+
+    try {
+      const resp = await fetch('/itinerary/', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(err.detail || 'Unknown error');
+      }
+      renderResults(await resp.json());
+    } catch (err) {
+      errorBox.textContent = err.message; errorBox.classList.add('visible');
+    } finally {
+      reset(btn); loader.classList.remove('visible');
+    }
+  });
+
+  function reset(btn) {
+    btn.disabled = false; btn.textContent = 'Generate Itinerary';
+    document.getElementById('loader').classList.remove('visible');
+  }
+
+  // Escape HTML to prevent XSS from LLM-returned strings
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  const mapLink = info => {
+    if (!info.google_maps_url) return '';
+    return `<a class="maps-link" href="${esc(info.google_maps_url)}" target="_blank" rel="noopener noreferrer">Map</a>`;
+  };
+  const star    = r => (r != null && r !== '') ? `<span class="rating">${esc(String(r))}</span>` : '';
+  const price   = v => (v ?? 0).toLocaleString();
+
+  function renderResults(data) {
+    const results = document.getElementById('results');
+    const nights  = data.itinerary.length;
+    const total   = data.itinerary.reduce((s,d) => s + (d.est_daily_price||0), 0);
+    results.innerHTML = `
+      <div class="summary-bar">
+        <div>
+          <div class="summary-city">${esc(data.city)}</div>
+          <div class="summary-meta">${esc(data.start_date)} to ${esc(data.end_date)} &nbsp;-&nbsp; ${nights} day${nights>1?'s':''}</div>
+        </div>
+        <div class="summary-right">
+          <div class="summary-budget">Budget $${data.budget.toLocaleString()}</div>
+          <div class="summary-est">Est. total $${total.toLocaleString()}</div>
+        </div>
+      </div>
+      ${data.itinerary.map(renderDay).join('')}`;
+    results.classList.add('visible');
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderDay(day) {
+    const hotel = day.hotel;
+    const sights = (day.sightseeing_spots || []);
+    const mealCard = (label, meal) => `
+      <div class="meal-card">
+        <div class="meal-label">${esc(label)}</div>
+        <div class="meal-name">${esc(meal.google_map_info.name)}</div>
+        <div class="meal-addr">${esc(meal.google_map_info.address)}</div>
+        <div class="meal-footer">
+          <div style="display:flex;gap:5px;align-items:center">${star(meal.google_map_info.rating)}<span class="price-tag">$${price(meal.est_price)}</span></div>
+          ${mapLink(meal.google_map_info)}
+        </div>
+      </div>`;
+    const sightHTML = sights.map(s => `
+      <div class="sight-item">
+        <div class="place-info">
+          <div class="place-name">${esc(s.location.name)}</div>
+          <div class="place-addr">${esc(s.location.address)}</div>
+          <div class="place-meta">${star(s.location.rating)}</div>
+        </div>
+        <div class="sight-right">
+          <span class="sight-time">${esc(s.time_range)}</span>
+          <span class="price-tag">$${price(s.est_price)}</span>
+          ${mapLink(s.location)}
+        </div>
+      </div>`).join('');
+    return `
+      <div class="day-card">
+        <div class="day-header">
+          <span class="date-label">${day.date}</span>
+          <span class="daily-cost">$${price(day.est_daily_price)} / day</span>
+        </div>
+        <div class="day-body">
+          <div>
+            <div class="section-title">Hotel</div>
+            <div class="place-row">
+              <div class="place-info">
+                <div class="place-name">${esc(hotel.google_map_info.name)}</div>
+                <div class="place-addr">${esc(hotel.google_map_info.address)}</div>
+                <div class="place-meta">${star(hotel.google_map_info.rating)}<span class="price-tag">$${price(hotel.est_price)}/night</span></div>
+              </div>
+              ${mapLink(hotel.google_map_info)}
+            </div>
+          </div>
+          <div class="section-divider"></div>
+          <div>
+            <div class="section-title">Meals</div>
+            <div class="meals-row">
+              ${mealCard('Breakfast', day.breakfast)}
+              ${mealCard('Lunch',     day.lunch)}
+              ${mealCard('Dinner',    day.dinner)}
+            </div>
+          </div>
+          ${sightHTML ? `
+          <div class="section-divider"></div>
+          <div>
+            <div class="section-title">Sightseeing</div>
+            <div style="display:flex;flex-direction:column;gap:0.55rem">${sightHTML}</div>
+          </div>` : ''}
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>
