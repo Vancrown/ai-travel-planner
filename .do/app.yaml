@@ -1,0 +1,32 @@
+# DigitalOcean App Platform app spec
+# Used when you deploy this repo via App Platform (Create App → GitHub → this repo).
+# Set OPENAI_API_KEY in the App Platform dashboard under App → Settings → App-Level Environment Variables.
+
+name: ai-travel-planner
+region: nyc
+
+services:
+  - name: web
+    github:
+      branch: main
+      deploy_on_push: true
+      repo: YOUR_GITHUB_USERNAME/ai-travel-planner
+    dockerfile_path: ./Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: OPENAI_API_KEY
+        type: secret
+        scope: RUN_TIME
+      - key: APP_ENV
+        value: production
+        type: general
+        scope: RUN_TIME
+    health_check:
+      http_path: /v1/health
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3

@@ -132,6 +132,10 @@ class DayItinerary(BaseModel):
     dinner: MealRecommendation
     sightseeing_spots: List[SightseeingSpot] = Field(default_factory=list)
     est_daily_price: int = Field(0, description="Estimated total cost for the day in USD")
+    day_difficulty: Optional[str] = Field(
+        None,
+        description="easy | moderate | intense — how packed/active the day is",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -146,7 +150,20 @@ class DayItinerary(BaseModel):
                     if alt in v:
                         v["est_daily_price"] = v.pop(alt)
                         break
+            if "day_difficulty" not in v:
+                for alt in ("difficulty", "intensity", "pace"):
+                    if alt in v:
+                        v["day_difficulty"] = v.pop(alt)
+                        break
         return v
+
+
+class BudgetBreakdown(BaseModel):
+    """Cost breakdown by category in USD."""
+    accommodation: int = 0
+    meals: int = 0
+    activities: int = 0
+    total: int = 0
 
 
 class ItineraryResponse(BaseModel):
@@ -158,6 +175,8 @@ class ItineraryResponse(BaseModel):
     budget: int
     estimated_total_price: int = 0
     itinerary: List[DayItinerary]
+    budget_breakdown: Optional[BudgetBreakdown] = None
+    tips: Optional[List[str]] = Field(None, description="Short travel tips for this trip")
 
     @model_validator(mode="before")
     @classmethod
@@ -168,4 +187,17 @@ class ItineraryResponse(BaseModel):
                     if alt in v:
                         v["estimated_total_price"] = v.pop(alt)
                         break
+            if "budget_breakdown" not in v:
+                for alt in ("budget_breakdown_by_category", "cost_breakdown"):
+                    if alt in v:
+                        v["budget_breakdown"] = v.pop(alt)
+                        break
         return v
+
+
+# -- Refine (follow-up) request for conversational edits --
+
+class RefineItineraryRequest(BaseModel):
+    """Request to refine an existing itinerary with a natural-language instruction."""
+    previous_itinerary: ItineraryResponse
+    instruction: str = Field(..., min_length=1, max_length=500)

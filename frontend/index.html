@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -181,6 +181,54 @@
     .summary-budget { font-size: 0.97rem; font-weight: 700; color: var(--text); }
     .summary-est { font-size: 0.75rem; color: var(--text3); margin-top: 3px; }
 
+    .budget-breakdown {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;
+      font-size: 0.72rem; color: var(--text3);
+    }
+    .budget-breakdown span { font-weight: 600; color: var(--text2); }
+
+    .tips-box {
+      background: #f0fdf4; border: 1px solid #bbf7d0;
+      border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.25rem;
+    }
+    .tips-box .section-title { color: #15803d; }
+    .tips-box ul { margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
+
+    .difficulty-badge {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 2px 8px; border-radius: 5px; margin-left: 8px;
+    }
+    .difficulty-badge.easy { background: #dcfce7; color: #166534; }
+    .difficulty-badge.moderate { background: #fef3c7; color: #92400e; }
+    .difficulty-badge.intense { background: #fee2e2; color: #991b1b; }
+
+    .results-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+    .results-actions .btn-secondary {
+      padding: 0.5rem 1rem; font-size: 0.8rem; background: var(--bg3); color: var(--text2);
+      border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+      font-weight: 600; transition: background 0.2s, border-color 0.2s;
+    }
+    .results-actions .btn-secondary:hover { background: var(--bg4); border-color: var(--bord2); }
+    .share-input { flex: 1; min-width: 200px; font-size: 0.8rem; padding: 0.5rem 0.75rem; }
+
+    .refine-box {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.25rem; margin-top: 1rem;
+    }
+    .refine-box label { display: block; margin-bottom: 0.5rem; font-size: 0.8rem; }
+    .refine-box input[type="text"] { margin-bottom: 0.75rem; }
+    .refine-box .btn-refine { padding: 0.6rem 1rem; width: auto; margin-top: 0; }
+
+    .demo-prompts { margin-bottom: 1.25rem; }
+    .demo-prompts .section-title { margin-bottom: 0.5rem; }
+    .demo-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .demo-btn {
+      padding: 0.45rem 0.9rem; font-size: 0.78rem; background: var(--bg3);
+      border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+      font-weight: 600; color: var(--text2); transition: background 0.2s;
+    }
+    .demo-btn:hover { background: var(--bg4); }
+
     /* -- Day Card -- */
     .day-card {
       background: var(--bg2); border: 1px solid var(--border);
@@ -285,6 +333,15 @@
       <div class="limit-badge">Budget <span>$50 - $500,000</span></div>
       <div class="limit-badge">Up to <span>3 spots / day</span></div>
       <div class="limit-badge">Takes <span>~20-40 sec</span></div>
+    </div>
+
+    <div class="demo-prompts">
+      <div class="section-title">Try an example (demo)</div>
+      <div class="demo-btns" id="demoBtns">
+        <button type="button" class="demo-btn" data-demo="0">Tokyo · 3 days · $800</button>
+        <button type="button" class="demo-btn" data-demo="1">Paris · 3 days · $1200</button>
+        <button type="button" class="demo-btn" data-demo="2">Bali · 4 days · $600</button>
+      </div>
     </div>
 
     <form id="planForm">
@@ -483,6 +540,79 @@
     document.getElementById('loader').classList.remove('visible');
   }
 
+  async function doRefine() {
+    const prev = window._lastItinerary;
+    const input = document.getElementById('refineInput');
+    const instruction = (input && input.value) ? input.value.trim() : '';
+    if (!prev) return;
+    if (!instruction) { document.getElementById('errorBox').textContent = 'Enter an instruction to refine (e.g. make it cheaper).'; document.getElementById('errorBox').classList.add('visible'); return; }
+    const btn = document.getElementById('refineBtn');
+    const loader = document.getElementById('loader');
+    const errorBox = document.getElementById('errorBox');
+    btn.disabled = true; btn.textContent = 'Refining...';
+    loader.classList.add('visible');
+    errorBox.classList.remove('visible');
+    try {
+      const resp = await fetch('/v1/itinerary/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ previous_itinerary: prev, instruction: instruction }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(err.detail || 'Refine failed');
+      }
+      renderResults(await resp.json());
+    } catch (err) {
+      errorBox.textContent = err.message;
+      errorBox.classList.add('visible');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Refine with AI';
+      loader.classList.remove('visible');
+    }
+  }
+
+  // Demo prompts: fill form from API or fallback defaults
+  let demoPrompts = [
+    { city: 'Tokyo', start_date: '2026-04-01', end_date: '2026-04-03', budget: 800, preferences: 'I love ramen and want to visit teamLab Borderless. Prefer boutique hotels.' },
+    { city: 'Paris', start_date: '2026-06-10', end_date: '2026-06-12', budget: 1200, preferences: 'Art museums, croissants, and a day trip to Versailles.' },
+    { city: 'Bali', start_date: '2026-07-01', end_date: '2026-07-04', budget: 600, preferences: 'Yoga, beaches, and local warungs. No party hostels.' },
+  ];
+  (async function loadDemoPrompts() {
+    try {
+      const r = await fetch('/v1/demo-prompts');
+      if (r.ok) {
+        const data = await r.json();
+        if (data.prompts && data.prompts.length) demoPrompts = data.prompts;
+      }
+    } catch (_) {}
+    document.querySelectorAll('.demo-btn').forEach((el, i) => {
+      el.addEventListener('click', () => {
+        const d = demoPrompts[i] || {};
+        document.getElementById('city').value = d.city || '';
+        document.getElementById('start_date').value = d.start_date || startEl.value;
+        document.getElementById('end_date').value = d.end_date || endEl.value;
+        document.getElementById('budget').value = d.budget || '';
+        document.getElementById('preferences').value = d.preferences || '';
+        updateDayCounter(); updateBudgetHint();
+        document.getElementById('prefCount').textContent = (d.preferences || '').length + ' / 500';
+      });
+    });
+  })();
+
+  // Restore shared itinerary from hash
+  (function restoreFromHash() {
+    const hash = location.hash;
+    if (!hash || !hash.startsWith('#share=')) return;
+    try {
+      const payload = hash.replace('#share=', '');
+      const data = JSON.parse(decodeURIComponent(escape(atob(payload))));
+      if (data.city && data.itinerary && Array.isArray(data.itinerary)) {
+        renderResults(data);
+      }
+    } catch (_) {}
+  })();
+
   // Escape HTML to prevent XSS from LLM-returned strings
   function esc(str) {
     if (str == null) return '';
@@ -505,20 +635,49 @@
     const results = document.getElementById('results');
     const nights  = data.itinerary.length;
     const total   = data.itinerary.reduce((s,d) => s + (d.est_daily_price||0), 0);
+    const breakdown = data.budget_breakdown;
+    const breakdownHtml = breakdown ? `
+      <div class="budget-breakdown">
+        <span>Accommodation $${(breakdown.accommodation||0).toLocaleString()}</span>
+        <span>Meals $${(breakdown.meals||0).toLocaleString()}</span>
+        <span>Activities $${(breakdown.activities||0).toLocaleString()}</span>
+      </div>` : '';
+    const tipsHtml = (data.tips && data.tips.length) ? `
+      <div class="tips-box">
+        <div class="section-title">Travel tips</div>
+        <ul>${data.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+      </div>` : '';
+    const shareUrl = location.origin + location.pathname + '#share=' + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
     results.innerHTML = `
+      <div class="results-actions">
+        <button type="button" class="btn-secondary" id="shareBtn" title="Copy shareable link">Share itinerary</button>
+        <input type="text" class="share-input" id="shareInput" value="${esc(shareUrl)}" readonly />
+      </div>
+      ${tipsHtml}
       <div class="summary-bar">
         <div>
           <div class="summary-city">${esc(data.city)}</div>
           <div class="summary-meta">${esc(data.start_date)} to ${esc(data.end_date)} &nbsp;-&nbsp; ${nights} day${nights>1?'s':''}</div>
+          ${breakdownHtml}
         </div>
         <div class="summary-right">
           <div class="summary-budget">Budget $${data.budget.toLocaleString()}</div>
           <div class="summary-est">Est. total $${total.toLocaleString()}</div>
         </div>
       </div>
-      ${data.itinerary.map(renderDay).join('')}`;
+      ${data.itinerary.map(renderDay).join('')}
+      <div class="refine-box">
+        <label for="refineInput">Refine this itinerary (e.g. &quot;make it cheaper&quot;, &quot;add more culture&quot;)</label>
+        <input type="text" id="refineInput" class="full" placeholder="Make it cheaper / add more cultural experiences..." maxlength="500" />
+        <button type="button" class="btn btn-refine" id="refineBtn">Refine with AI</button>
+      </div>`;
     results.classList.add('visible');
     results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window._lastItinerary = data;
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(shareUrl).then(() => { document.getElementById('shareBtn').textContent = 'Copied!'; setTimeout(() => { document.getElementById('shareBtn').textContent = 'Share itinerary'; }, 2000); });
+    });
+    document.getElementById('refineBtn').addEventListener('click', doRefine);
   }
 
   function renderDay(day) {
@@ -550,7 +709,7 @@
     return `
       <div class="day-card">
         <div class="day-header">
-          <span class="date-label">${day.date}</span>
+          <span class="date-label">${day.date}${(day.day_difficulty ? `<span class="difficulty-badge ${esc(day.day_difficulty)}">${esc(day.day_difficulty)}</span>` : '')}</span>
           <span class="daily-cost">$${price(day.est_daily_price)} / day</span>
         </div>
         <div class="day-body">
